@@ -1,0 +1,7 @@
+#!@SHELL@
+
+declare -r lib_dir=@OUT@/lib
+${{template_declares}}
+declare -r app_mainclass='${{app_mainclass}}'
+
+exec @JAVA@ -classpath "$app_classpath" "$app_mainclass" "$@"
