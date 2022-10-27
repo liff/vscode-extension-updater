@@ -19,6 +19,8 @@ import org.typelevel.log4cats.syntax.*
 import org.typelevel.log4cats.{Logger, LoggerFactory}
 import updater.gallery.{Extension, Version}
 
+import scala.collection.immutable.SortedMap
+
 object Main
     extends CommandIOApp(
       name = BuildInfo.name,
@@ -45,7 +47,8 @@ object Main
       httpClientResource[IO](logging = debug, max = parallelism).map(GZip(1024 * 1024)).use { http =>
         val gallery = Gallery[IO](http)
         for
-          current <- readJsonFile[IO, Packages](stateFile).handleError(_ => Map.empty)
+          current <- readJsonFile[IO, Packages](stateFile)
+            .handleError(_ => SortedMap.empty[Publisher, SortedMap[Name, SortedMap[NixSystem, Package]]])
 
           pkgsV <- stdin
             .through(fs2.text.utf8.decode)
@@ -60,13 +63,13 @@ object Main
             }
             .parEvalMapUnordered(parallelism) { ext =>
               toPackage[IO](http, current, ext).map { pkg =>
-                Map(ext.publisher.publisherName -> Map(ext.extensionName -> pkg))
+                SortedMap(ext.publisher.publisherName -> SortedMap(ext.extensionName -> pkg))
               }
             }
             .compile
-            .foldMonoid: IO[Map[String, Map[String, Vector[(NixSystem, Package)]]]] // sucks
+            .foldMonoid: IO[SortedMap[String, SortedMap[String, Vector[(NixSystem, Package)]]]] // sucks
 
-          pkgs = pkgsV.mapV(_.mapV(_.toMap)) // get rid of innermost Vector
+          pkgs = pkgsV.mapV(_.mapV(SortedMap.from)) // get rid of innermost Vector
 
           _ <- pkgs.writeTo[IO](stateFile)
         yield ExitCode.Success
@@ -110,7 +113,7 @@ def toPackage[F[_]: Concurrent: Logger](
           )
         }
 
-        pkg <- if (known.exists(_.version == version.version)) then OptionT.fromOption(known) else downloaded
+        pkg <- if known.exists(_.version == version.version) then OptionT.fromOption(known) else downloaded
       yield system -> pkg).value
     }
     .map(_.unite.toVector)

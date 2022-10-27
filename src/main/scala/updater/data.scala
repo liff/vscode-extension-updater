@@ -2,11 +2,12 @@ package updater
 
 import cats.Order
 import cats.effect.Concurrent
+import io.circe.*
 import org.http4s.{EntityDecoder, Uri}
-import io.circe.{Codec, Decoder, Encoder, KeyDecoder, KeyEncoder}
 
 import java.time.Instant
 import java.util.UUID
+import scala.collection.immutable.SortedMap
 
 opaque type Sri = String
 
@@ -46,6 +47,8 @@ object NixSystem:
     case _                       => None
   }
 
+  given Ordering[NixSystem] = Ordering.by(_.ordinal)
+
   given KeyEncoder[NixSystem] = KeyEncoder[String].contramap(_.toString)
   given KeyDecoder[NixSystem] = KeyDecoder.instance(fromString)
 
@@ -63,7 +66,7 @@ case class Package(
     sha256: Sri,
 ) derives Codec.AsObject
 
-type Packages = Map[Publisher, Map[Name, Map[NixSystem, Package]]]
+type Packages = SortedMap[Publisher, SortedMap[Name, SortedMap[NixSystem, Package]]]
 
 extension (pkgs: Packages)
   def get(publisher: Publisher, name: Name, system: NixSystem): Option[Package] =
