@@ -14,7 +14,7 @@ import org.http4s.Method.GET
 import fs2.text.base64
 import fs2.hash.sha256
 
-def httpClientResource[F[_]: Async: Console](logging: Boolean, max: Int) =
+def httpClientResource[F[_]: Async: Console](logging: Boolean) =
   EmberClientBuilder
     .default[F]
     .withUserAgent(userAgent)

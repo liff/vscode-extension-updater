@@ -34,6 +34,9 @@ class Gallery[F[_]: LoggerFactory](client: Client[F], pageSize: Int = 3) extends
   private def fetchPage(number: Int)(using F: Concurrent[F]): F[gallery.Response] =
     client.expectDirect(page(number))
 
+  def byExtensionId(extensionId: ExtensionId)(using F: Concurrent[F]): F[gallery.Extension[Version]] =
+    byName(extensionId.publisher, extensionId.name)
+
   def byName(publisher: String, name: String)(using F: Concurrent[F]): F[gallery.Extension[Version]] =
     client.expectDirect[gallery.Response](post(ExtensionRequests.byName(publisher, name))).flatMap {
       case Response(Seq(Result(Seq(extension), _, _))) => F.pure(extension)

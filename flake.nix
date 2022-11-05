@@ -29,7 +29,7 @@
           depsSha256 = "sha256-Gl+TFFChNu8XQA0KhpMgFJxHmD/2Dkg2glALOjpm0vw=";
  
           src = ./.;
- 
+
           buildPhase = ''
             runHook preBuild
             sbt stage
@@ -56,6 +56,8 @@
               sbt
               dotty
             ];
+
+            env = [ { name = "JAVA_HOME"; value = jdk.home; } ];
           };
       });
 }

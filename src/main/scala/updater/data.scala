@@ -1,5 +1,7 @@
 package updater
 
+import cats.derived.*
+import cats.syntax.all.*
 import cats.Order
 import cats.effect.Concurrent
 import io.circe.*
@@ -8,6 +10,12 @@ import org.http4s.{EntityDecoder, Uri}
 import java.time.Instant
 import java.util.UUID
 import scala.collection.immutable.SortedMap
+import scala.collection.immutable.SortedSet
+import cats.data.Validated
+import cats.data.Validated.Valid
+import cats.data.Validated.Invalid
+import com.monovore.decline.Argument
+import cats.Monoid
 
 opaque type Sri = String
 
@@ -58,17 +66,51 @@ object NixSystem:
 type Publisher = String
 type Name      = String
 
+case class ExtensionId(
+    publisher: Publisher,
+    name: Name,
+) derives Order:
+  override def toString(): String = s"$publisher.$name"
+
+object ExtensionId:
+  def parse(string: String): Validated[String, ExtensionId] =
+    string
+      .trim()
+      .split('.')
+      .match
+        case Array(publisher, name) if publisher.nonEmpty && name.nonEmpty => Valid(ExtensionId(publisher, name))
+        case _ => Invalid(s"extension ID format must be `publisher.name`, got '$string'")
+
+  given Argument[ExtensionId] = new Argument[ExtensionId] {
+    override def read(string: String)   = parse(string).toValidatedNel
+    override val defaultMetavar: String = "EXTENSION-ID"
+  }
+
 case class Package(
     publisher: Publisher,
     name: Name,
     version: String,
     arch: String,
     sha256: Sri,
-) derives Codec.AsObject
+) derives Codec.AsObject,
+      Order:
+  val extensionId: ExtensionId = ExtensionId(publisher, name)
 
 type Packages = SortedMap[Publisher, SortedMap[Name, SortedMap[NixSystem, Package]]]
 
+object Packages:
+  val empty: Packages = SortedMap.empty
+
+given Monoid[SortedMap[NixSystem, Package]] =
+  Monoid.instance(SortedMap.empty, _ ++ _)
+
 extension (pkgs: Packages)
+  def allPackages: SortedSet[Package] =
+    SortedSet.from(pkgs.flatMap { (_, names) => names.flatMap { (_, systems) => systems.values } })
+
+  def extensionIds: SortedSet[ExtensionId] =
+    allPackages.map(_.extensionId)
+
   def get(publisher: Publisher, name: Name, system: NixSystem): Option[Package] =
     for
       names   <- pkgs.get(publisher)

@@ -34,6 +34,7 @@ libraryDependencies ++= Seq(
   "co.fs2"        %% "fs2-io"              % "3.3.0",
   "org.typelevel" %% "cats-core"           % "2.8.0",
   "org.typelevel" %% "cats-effect"         % "3.3.14",
+  "org.typelevel" %% "kittens"             % "3.0.0",
   "io.circe"      %% "circe-core"          % "0.14.3",
   "io.circe"      %% "circe-jawn"          % "0.14.3",
   "io.circe"      %% "circe-generic"       % "0.14.3",

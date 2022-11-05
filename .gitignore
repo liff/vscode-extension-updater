@@ -3,3 +3,5 @@ target/
 /result
 .native-impl/
 /data/
+.bloop
+/project/metals.sbt
