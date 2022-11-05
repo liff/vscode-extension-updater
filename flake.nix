@@ -25,9 +25,9 @@
 
           inherit pname;
           version = "1";
- 
-          depsSha256 = "sha256-Gl+TFFChNu8XQA0KhpMgFJxHmD/2Dkg2glALOjpm0vw=";
- 
+
+          depsSha256 = "sha256-z5BmcxCtNGh93TbV6itQuJbMz4rF/LmZyVMJAzg8rWU=";
+
           src = ./.;
 
           buildPhase = ''
@@ -35,7 +35,7 @@
             sbt stage
             runHook postBuild
           '';
- 
+
           installPhase = ''
             runHook preInstall
             mkdir -p "$out/"
