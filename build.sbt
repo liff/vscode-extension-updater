@@ -20,6 +20,7 @@ scalacOptions ++= Seq(
   "future",
   "-release",
   "17",
+  "-language:strictEquality",
   "-unchecked",
   "-Wunused:all",
   "-Xcheck-macros",

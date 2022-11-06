@@ -3,6 +3,7 @@ package updater
 import cats.derived.*
 import cats.syntax.all.*
 import cats.Order
+import cats.Show
 import cats.effect.Concurrent
 import io.circe.*
 import org.http4s.{EntityDecoder, Uri}
@@ -20,7 +21,8 @@ import cats.Monoid
 opaque type Sri = String
 
 object Sri:
-  given Order[Sri] = cats.instances.string.catsKernelStdOrderForString
+  given CanEqual[Sri, Sri] = CanEqual.derived
+  given Order[Sri]         = cats.instances.string.catsKernelStdOrderForString
 
   given Encoder[Sri] = Encoder.encodeString
   given Decoder[Sri] = Decoder.decodeString
@@ -29,7 +31,7 @@ object Sri:
 
   def sha256(enc: String): Sri = s"sha256-$enc"
 
-enum NixSystem(override val toString: String):
+enum NixSystem(override val toString: String) derives CanEqual, Order:
   case X86_64_Linux   extends NixSystem("x86_64-linux")
   case Aarch64_Linux  extends NixSystem("aarch64-linux")
   case X86_64_Darwin  extends NixSystem("x86_64-darwin")
@@ -55,8 +57,6 @@ object NixSystem:
     case _                       => None
   }
 
-  given Ordering[NixSystem] = Ordering.by(_.ordinal)
-
   given KeyEncoder[NixSystem] = KeyEncoder[String].contramap(_.toString)
   given KeyDecoder[NixSystem] = KeyDecoder.instance(fromString)
 
@@ -69,7 +69,8 @@ type Name      = String
 case class ExtensionId(
     publisher: Publisher,
     name: Name,
-) derives Order:
+) derives CanEqual,
+      Order:
   override def toString(): String = s"$publisher.$name"
 
 object ExtensionId:
@@ -80,6 +81,8 @@ object ExtensionId:
       .match
         case Array(publisher, name) if publisher.nonEmpty && name.nonEmpty => Valid(ExtensionId(publisher, name))
         case _ => Invalid(s"extension ID format must be `publisher.name`, got '$string'")
+
+  given Show[ExtensionId] = Show.fromToString
 
   given Argument[ExtensionId] = new Argument[ExtensionId] {
     override def read(string: String)   = parse(string).toValidatedNel
@@ -92,11 +95,14 @@ case class Package(
     version: String,
     arch: String,
     sha256: Sri,
-) derives Codec.AsObject,
-      Order:
+) derives CanEqual,
+      Order,
+      Codec.AsObject:
   val extensionId: ExtensionId = ExtensionId(publisher, name)
 
 type Packages = SortedMap[Publisher, SortedMap[Name, SortedMap[NixSystem, Package]]]
+
+given CanEqual[Packages, Packages] = CanEqual.derived
 
 object Packages:
   val empty: Packages = SortedMap.empty

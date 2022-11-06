@@ -13,6 +13,7 @@ import org.http4s.client.{Client, UnexpectedStatus}
 import org.http4s.Method.GET
 import fs2.text.base64
 import fs2.hash.sha256
+import org.http4s.Status
 
 def httpClientResource[F[_]: Async: Console](logging: Boolean) =
   EmberClientBuilder
@@ -64,6 +65,8 @@ extension [E, F[_], A](fa: F[A])(using F: MonadError[F, E])
       recover = e => if (cond.applyOrElse(e, _ => false)) then None.pure else e.raiseError,
       bind = _.some.pure,
     )
+
+given CanEqual[Status, Status] = CanEqual.derived
 
 extension [F[_]: MonadThrow, A](fa: F[A])
   def notFoundIsNone: F[Option[A]] = fa.swallowErrorIf { case UnexpectedStatus(NotFound, _, _) => true }

@@ -8,6 +8,7 @@ import cats.effect.Concurrent
 import cats.effect.ExitCode
 import cats.effect.IO
 import cats.effect.Resource
+import cats.effect.std.Console
 import cats.syntax.all.*
 import com.monovore.decline.*
 import com.monovore.decline.effect.*
@@ -53,8 +54,13 @@ object Main
     val debug: Opts[Boolean] = Opts.flag("debug", help = "Enable debug logging.", short = "d").orFalse
 
     enum Action:
+      case List()
       case Update()
       case Add(extensionIds: NonEmptySet[ExtensionId])
+
+    val list = Opts.subcommand("list", "List extensions in the state") {
+      Opts(Action.List())
+    }
 
     val update: Opts[Action] = Opts.subcommand("update", "Update extension versions") {
       Opts(Action.Update())
@@ -64,7 +70,7 @@ object Main
       (Opts.arguments[ExtensionId]("extension-id")).map(ids => Action.Add(ids.toNes))
     }
 
-    val action = update.orElse(add)
+    val action = list.orElse(update).orElse(add)
 
   implicit val logging: LoggerFactory[IO] = Slf4jFactory[IO]
 
@@ -78,16 +84,17 @@ object Main
           updater = Updater[IO](http, parallelism, current)
 
           pkgs <- action.match
+            case O.Action.List()            => updater.list
             case O.Action.Update()          => updater.update
             case O.Action.Add(extensionIds) => updater.add(extensionIds)
 
-          _ <- pkgs.writeTo[IO](stateFile)
+          _ <- if pkgs != current then pkgs.writeTo[IO](stateFile) else IO.unit
         yield ExitCode.Success
       }
     }
 end Main
 
-class Updater[F[_]: Concurrent: LoggerFactory](
+class Updater[F[_]: Concurrent: Console: LoggerFactory](
     http: Client[F],
     parallelism: Int,
     current: Packages,
@@ -149,6 +156,8 @@ class Updater[F[_]: Concurrent: LoggerFactory](
         yield system -> pkg).value
       }
       .map(it => SortedMap.from(it.unite))
+
+  val list: F[Packages] = current.extensionIds.toSeq.traverse(Console[F].println).as(current)
 
   val update: F[Packages] = fetchOrUpdate(current.extensionIds)
 
