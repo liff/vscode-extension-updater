@@ -57,6 +57,7 @@ object Main
       case List()
       case Update()
       case Add(extensionIds: NonEmptySet[ExtensionId])
+      case Remove(extensionIds: NonEmptySet[ExtensionId])
 
     val list = Opts.subcommand("list", "List extensions in the state") {
       Opts(Action.List())
@@ -70,7 +71,11 @@ object Main
       (Opts.arguments[ExtensionId]("extension-id")).map(ids => Action.Add(ids.toNes))
     }
 
-    val action = list.orElse(update).orElse(add)
+    val remove: Opts[Action] = Opts.subcommand("remove", "Remove extensions") {
+      (Opts.arguments[ExtensionId]("extension-id")).map(ids => Action.Remove(ids.toNes))
+    }
+
+    val action = list.orElse(update).orElse(add).orElse(remove)
 
   implicit val logging: LoggerFactory[IO] = Slf4jFactory[IO]
 
@@ -84,9 +89,10 @@ object Main
           updater = Updater[IO](http, parallelism, current)
 
           pkgs <- action.match
-            case O.Action.List()            => updater.list
-            case O.Action.Update()          => updater.update
-            case O.Action.Add(extensionIds) => updater.add(extensionIds)
+            case O.Action.List()               => updater.list
+            case O.Action.Update()             => updater.update
+            case O.Action.Add(extensionIds)    => updater.add(extensionIds)
+            case O.Action.Remove(extensionIds) => updater.remove(extensionIds)
 
           _ <- if pkgs != current then pkgs.writeTo[IO](stateFile) else IO.unit
         yield ExitCode.Success
@@ -164,3 +170,10 @@ class Updater[F[_]: Concurrent: Console: LoggerFactory](
   def add(extensionIds: NonEmptySet[ExtensionId]): F[Packages] =
     for added <- fetchOrUpdate(extensionIds.toSortedSet)
     yield current |+| added
+
+  def remove(extensionIds: NonEmptySet[ExtensionId]): F[Packages] =
+    current.map { case entry@(publisher, names) =>
+      extensionIds.find(_.publisher == publisher).match
+        case None => entry
+        case Some(extensionId) => publisher -> names.removed(extensionId.name)
+    }.pure[F]
