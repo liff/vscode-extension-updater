@@ -68,11 +68,11 @@ object Main
     }
 
     val add: Opts[Action] = Opts.subcommand("add", "Add extensions") {
-      (Opts.arguments[ExtensionId]("extension-id")).map(ids => Action.Add(ids.toNes))
+      Opts.arguments[ExtensionId]("extension-id").map(ids => Action.Add(ids.toNes))
     }
 
     val remove: Opts[Action] = Opts.subcommand("remove", "Remove extensions") {
-      (Opts.arguments[ExtensionId]("extension-id")).map(ids => Action.Remove(ids.toNes))
+      Opts.arguments[ExtensionId]("extension-id").map(ids => Action.Remove(ids.toNes))
     }
 
     val action = list.orElse(update).orElse(add).orElse(remove)
