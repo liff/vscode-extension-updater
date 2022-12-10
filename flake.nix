@@ -53,7 +53,7 @@
         devShell =
           pkgs.devshell.mkShell {
             packages = with pkgs; [
-              sbt
+              (pkgs.sbt.override { jre = jdk; })
               dotty
             ];
 

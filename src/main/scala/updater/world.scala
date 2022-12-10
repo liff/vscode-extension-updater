@@ -17,5 +17,3 @@ def readJsonFile[F[_]: Files: Sync, A: Decoder](path: Path): F[A] =
 extension [A: Encoder](a: A)
   def writeTo[F[_]: Files: Sync](path: Path): F[Unit] =
     Stream.emit(a.asJson.spaces4).through(utf8.encode).through(Files[F].writeAll(path)).compile.drain
-
-extension [K: Ordering, V](m: SortedMap[K, V]) def mapV[W](f: V => W): SortedMap[K, W] = m.map((k, v) => k -> f(v))

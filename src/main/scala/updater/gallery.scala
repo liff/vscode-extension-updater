@@ -34,10 +34,10 @@ class Gallery[F[_]: LoggerFactory](client: Client[F], pageSize: Int = 3) extends
   private def fetchPage(number: Int)(using F: Concurrent[F]): F[gallery.Response] =
     client.expectDirect(page(number))
 
-  def byExtensionId(extensionId: ExtensionId)(using F: Concurrent[F]): F[gallery.Extension[Version]] =
+  def byExtensionId(extensionId: ExtensionId)(using F: Concurrent[F]): F[gallery.Extension] =
     byName(extensionId.publisher, extensionId.name)
 
-  def byName(publisher: String, name: String)(using F: Concurrent[F]): F[gallery.Extension[Version]] =
+  def byName(publisher: String, name: String)(using F: Concurrent[F]): F[gallery.Extension] =
     client.expectDirect[gallery.Response](post(ExtensionRequests.byName(publisher, name))).flatMap {
       case Response(Seq(Result(Seq(extension), _, _))) => F.pure(extension)
       case Response(Seq())                             => F.raiseError(NoResults())
@@ -45,7 +45,7 @@ class Gallery[F[_]: LoggerFactory](client: Client[F], pageSize: Int = 3) extends
       case unexpected @ Response(_)                    => F.raiseError(UnexpectedResponse(unexpected))
     }
 
-  def all(using F: Concurrent[F]): Stream[F, Extension[Version]] =
+  def all(using F: Concurrent[F]): Stream[F, Extension] =
     Stream.unfoldChunkEval(firstPage) { n =>
       if n == -1 then None.pure[F]
       else
@@ -101,7 +101,7 @@ private object ExtensionRequests:
     Flag.IncludeVersions,
     Flag.ExcludeNonValidated,
     Flag.IncludeAssetUri,
-    Flag.IncludeLatestVersionOnly,
+    Flag.IncludeVersionProperties,
   )
 
 private val baseUri = uri"https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery"

@@ -47,4 +47,5 @@ libraryDependencies ++= Seq(
   "org.http4s"    %% "http4s-dsl"          % "1.0.0-M37",
   "com.monovore"  %% "decline-effect"      % "2.4.0",
   "io.circe"      %% "circe-fs2"           % "0.14.0",
+  "io.kevinlee"   %% "just-semver"         % "0.6.0",
 )

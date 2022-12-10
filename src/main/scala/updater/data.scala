@@ -7,6 +7,7 @@ import cats.Show
 import cats.effect.Concurrent
 import io.circe.*
 import org.http4s.{EntityDecoder, Uri}
+import just.semver.SemVer
 
 import java.time.Instant
 import java.util.UUID
@@ -92,7 +93,7 @@ object ExtensionId:
 case class Package(
     publisher: Publisher,
     name: Name,
-    version: String,
+    version: SemVer,
     arch: String,
     sha256: Sri,
 ) derives CanEqual,

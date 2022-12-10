@@ -33,6 +33,7 @@ import org.typelevel.log4cats.slf4j.Slf4jFactory
 import org.typelevel.log4cats.syntax.*
 import updater.gallery.Extension
 import updater.gallery.Version
+import just.semver.SemVer
 
 import scala.collection.immutable.SortedMap
 import scala.collection.immutable.SortedSet
@@ -49,9 +50,9 @@ object Main
     val stateFile = Opts.argument[Path](metavar = "STATE-FILE")
 
     val parallelism =
-      Opts.option[Int]("parallelism", "Maximum number of requests in flight", short = "p").withDefault(3)
+      Opts.option[Int]("parallelism", "Maximum number of requests in flight.", short = "p").withDefault(3)
 
-    val debug: Opts[Boolean] = Opts.flag("debug", help = "Enable debug logging.", short = "d").orFalse
+    val debug = Opts.flag("debug", help = "Enable debug logging.", short = "d").orFalse
 
     enum Action:
       case List()
@@ -59,19 +60,19 @@ object Main
       case Add(extensionIds: NonEmptySet[ExtensionId])
       case Remove(extensionIds: NonEmptySet[ExtensionId])
 
-    val list = Opts.subcommand("list", "List extensions in the state") {
+    val list = Opts.subcommand("list", "List extensions in the state.") {
       Opts(Action.List())
     }
 
-    val update: Opts[Action] = Opts.subcommand("update", "Update extension versions") {
+    val update: Opts[Action] = Opts.subcommand("update", "Update extension versions.") {
       Opts(Action.Update())
     }
 
-    val add: Opts[Action] = Opts.subcommand("add", "Add extensions") {
+    val add: Opts[Action] = Opts.subcommand("add", "Add extensions.") {
       Opts.arguments[ExtensionId]("extension-id").map(ids => Action.Add(ids.toNes))
     }
 
-    val remove: Opts[Action] = Opts.subcommand("remove", "Remove extensions") {
+    val remove: Opts[Action] = Opts.subcommand("remove", "Remove extensions.") {
       Opts.arguments[ExtensionId]("extension-id").map(ids => Action.Remove(ids.toNes))
     }
 
@@ -108,7 +109,7 @@ class Updater[F[_]: Concurrent: Console: LoggerFactory](
   private implicit val logger: Logger[F] = LoggerFactory[F].getLogger
   private val gallery                    = Gallery[F](http)
 
-  private val packagesFromExtension: Pipe[F, Extension[Version], Packages] =
+  private val packagesFromExtension: Pipe[F, Extension, Packages] =
     _.parEvalMapUnordered(parallelism) { ext =>
       toPackage(ext).map { pkg =>
         SortedMap(ext.publisher.publisherName -> SortedMap(ext.extensionName -> pkg))
@@ -126,8 +127,8 @@ class Updater[F[_]: Concurrent: Console: LoggerFactory](
       .compile
       .foldMonoid
 
-  private def toPackage(extension: Extension[Version]): F[SortedMap[NixSystem, Package]] =
-    extension.versions
+  private def toPackage(extension: Extension): F[SortedMap[NixSystem, Package]] =
+    extension.latestByTargetPlatform
       .traverse { version =>
         (for
           system <- OptionT.fromOption(NixSystem.fromGallery(version.targetPlatform))
@@ -172,8 +173,12 @@ class Updater[F[_]: Concurrent: Console: LoggerFactory](
     yield current |+| added
 
   def remove(extensionIds: NonEmptySet[ExtensionId]): F[Packages] =
-    current.map { case entry@(publisher, names) =>
-      extensionIds.find(_.publisher == publisher).match
-        case None => entry
-        case Some(extensionId) => publisher -> names.removed(extensionId.name)
-    }.pure[F]
+    current
+      .map { case entry @ (publisher, names) =>
+        extensionIds
+          .find(_.publisher == publisher)
+          .match
+            case None              => entry
+            case Some(extensionId) => publisher -> names.removed(extensionId.name)
+      }
+      .pure[F]
