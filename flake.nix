@@ -26,7 +26,7 @@
           inherit pname;
           version = "1";
 
-          depsSha256 = "sha256-hRihyiF8IfZY40k7WSyngeNfwhKC3e5o74O2Pd0t64c=";
+          depsSha256 = "sha256-l2+E0TGbe2HO02i61hW4mzW7D7oDP+9W1zEsHbd+aS8=";
 
           src = ./.;
 
