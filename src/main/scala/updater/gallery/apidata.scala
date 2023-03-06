@@ -214,7 +214,7 @@ extension (properties: Map[String, String])
   private def extensionIds(key: String): Validated[String, SortedSet[ExtensionId]] =
     properties
       .get(key)
-      .map(_.trim())
+      .map(_.trim().nn)
       .filter(_.nonEmpty)
       .map(
         _.split(',').toSeq
@@ -233,7 +233,7 @@ object Properties:
       Validated.Valid(entries.get("Microsoft.VisualStudio.Code.Engine"))
     val preRelease = Validated
       .catchNonFatal(entries.getOrElse("Microsoft.VisualStudio.Code.PreRelease", "false").toBoolean)
-      .leftMap(_.getMessage)
+      .leftMap(_.getMessage.nn)
     (extensionDependencies, extensionPack, engine, preRelease).mapN(Properties.apply).toEither
   }
 

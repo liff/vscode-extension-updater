@@ -15,7 +15,7 @@
       let
         pkgs = import nixpkgs {
           inherit system;
-          overlays = [ devshell.overlay ];
+          overlays = [ devshell.overlays.default ];
         };
         jdk = pkgs.openjdk17;
         pname = "vscode-extension-updater";

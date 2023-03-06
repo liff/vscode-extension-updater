@@ -78,7 +78,9 @@ object ExtensionId:
   def parse(string: String): Validated[String, ExtensionId] =
     string
       .trim()
+      .nn
       .split('.')
+      .nn
       .match
         case Array(publisher, name) if publisher.nonEmpty && name.nonEmpty => Valid(ExtensionId(publisher, name))
         case _ => Invalid(s"extension ID format must be `publisher.name`, got '$string'")
